@@ -1,6 +1,6 @@
 # 🏦 BankReconcile
 
-[![CI/CD Pipeline](https://github.com/bankreconcile/bankreconcile/actions/workflows/ci.yml/badge.svg)](https://github.com/bankreconcile/bankreconcile/actions)
+[![CI/CD Pipeline](https://github.com/HeidyFloresTest/bank-statement-to-sheet/actions/workflows/ci.yml/badge.svg)](https://github.com/HeidyFloresTest/bank-statement-to-sheet/actions)
 [![Python 3.10 | 3.11 | 3.12](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Coverage: >85%](https://img.shields.io/badge/Coverage->85%25-success.svg)](coverage.xml)
@@ -93,8 +93,8 @@ La aplicación estará disponible inmediatamente en: [http://localhost:8000](htt
 
 #### 2. Clonar el Repositorio y Configurar Entorno
 ```bash
-git clone https://github.com/bankreconcile/bankreconcile.git
-cd bankreconcile
+git clone https://github.com/HeidyFloresTest/bank-statement-to-sheet.git
+cd bank-statement-to-sheet
 
 # Crear y activar entorno virtual
 python -m venv .venv
