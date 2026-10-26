@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BankReconcile | Conciliación Bancaria y Extracción Inteligente</title>
+  <meta name="description" content="Extracción automática de extractos bancarios en PDF y CSV con normalización y exportación a Excel corporativo.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .editable-cell:focus {
+      outline: 2px solid #6366f1;
+      background-color: rgba(30, 41, 59, 0.9);
+      border-radius: 4px;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0b0f19; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+  </style>
+</head>
+<body class="min-h-full flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950/40">
+
+  <!-- Header Navigation -->
+  <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-emerald-400 p-[1px] shadow-lg shadow-indigo-500/20">
+          <div class="w-full h-full bg-slate-950 rounded-[11px] flex items-center justify-center">
+            <i data-lucide="landmark" class="w-5 h-5 text-indigo-400"></i>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-bold tracking-tight text-white">BankReconcile</h1>
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">Enterprise</span>
+          </div>
+          <p class="text-xs text-slate-400">Extractor de Extractos Bancarios & Conciliación</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <div id="system-status-pill" class="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="system-status-text">Sistema En Línea</span>
+        </div>
+        <a href="/docs" target="_blank" class="text-xs font-medium text-slate-400 hover:text-indigo-400 flex items-center gap-1 transition-colors">
+          <i data-lucide="file-code" class="w-3.5 h-3.5"></i> API Docs
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- Hero / Explanation Banner -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl glass-panel relative overflow-hidden">
+      <div class="absolute -right-12 -top-12 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="space-y-1">
+        <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+          Conciliación Automatizada de Extractos
+        </h2>
+        <p class="text-sm text-slate-400 max-w-2xl">
+          Sube tus extractos en PDF o CSV de cualquier entidad bancaria (BBVA, Santander, Chase, etc.). Normalizamos fechas, importes y saldos para que audites y descargues un Excel con fórmulas listas.
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-right hidden sm:block">
+          <div class="text-xs text-slate-400">Límite por archivo</div>
+          <div class="text-sm font-semibold text-slate-200">25 MB (PDF / CSV)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload & Queue Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Drag & Drop Zone -->
+      <div class="lg:col-span-2">
+        <div id="drop-zone" class="border-2 border-dashed border-slate-700 hover:border-indigo-500/70 rounded-2xl p-8 text-center transition-all duration-200 bg-slate-900/40 hover:bg-indigo-950/20 cursor-pointer group relative flex flex-col items-center justify-center min-h-[220px]">
+          <input type="file" id="file-input" multiple accept=".pdf,.csv,.txt" class="hidden">
+          
+          <div class="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200">
+            <i data-lucide="upload-cloud" class="w-8 h-8 text-indigo-400"></i>
+          </div>
+
+          <h3 class="text-base font-semibold text-white mb-1">
+            Arrastra y suelta tus archivos aquí, o <span class="text-indigo-400 underline underline-offset-4">explora</span>
+          </h3>
+          <p class="text-xs text-slate-400 mb-3">Formatos compatibles: Extractos en PDF, CSV o TXT delimitado</p>
+
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700">
+              <i data-lucide="file-text" class="w-3 h-3 text-red-400"></i> PDF Bancario
+            </span>
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700">
+              <i data-lucide="table" class="w-3 h-3 text-emerald-400"></i> CSV / Tabular
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- File Queue & Process Button -->
+      <div class="glass-panel rounded-2xl p-6 flex flex-col justify-between">
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+              <i data-lucide="layers" class="w-4 h-4 text-indigo-400"></i>
+              Cola de Archivos
+            </h3>
+            <span id="queue-count" class="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 text-indigo-400">0</span>
+          </div>
+
+          <div id="file-queue-list" class="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+            <div id="empty-queue-msg" class="text-center py-6 text-xs text-slate-500">
+              No hay archivos seleccionados
+            </div>
+          </div>
+        </div>
+
+        <button id="btn-process" disabled class="w-full mt-4 py-3 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-lg shadow-indigo-600/25 transition-all">
+          <i data-lucide="cpu" class="w-4 h-4"></i>
+          <span>Procesar y Extraer Movimientos</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Live KPI Summary Cards -->
+    <div id="kpi-section" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Total Ingresos -->
+      <div class="glass-panel p-5 rounded-2xl relative overflow-hidden group hover:border-emerald-500/30 transition-colors">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Ingresos (Abonos)</span>
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <i data-lucide="arrow-down-left" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div id="kpi-ingresos" class="text-2xl font-bold font-mono text-emerald-400">$0.00</div>
+        <div class="text-[11px] text-slate-500 mt-1">Créditos bancarios detectados</div>
+      </div>
+
+      <!-- Total Egresos -->
+      <div class="glass-panel p-5 rounded-2xl relative overflow-hidden group hover:border-rose-500/30 transition-colors">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Egresos (Cargos)</span>
+          <div class="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+            <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div id="kpi-egresos" class="text-2xl font-bold font-mono text-rose-400">$0.00</div>
+        <div class="text-[11px] text-slate-500 mt-1">Débitos y pagos detectados</div>
+      </div>
+
+      <!-- Flujo Neto -->
+      <div class="glass-panel p-5 rounded-2xl relative overflow-hidden group hover:border-indigo-500/30 transition-colors">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Flujo de Caja Neto</span>
+          <div class="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+            <i data-lucide="scale" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div id="kpi-saldo-neto" class="text-2xl font-bold font-mono text-slate-100">$0.00</div>
+        <div id="kpi-neto-badge" class="text-[11px] text-slate-500 mt-1">Balance positivo/negativo</div>
+      </div>
+
+      <!-- Total Movimientos -->
+      <div class="glass-panel p-5 rounded-2xl relative overflow-hidden group hover:border-slate-500/30 transition-colors">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Movimientos</span>
+          <div class="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+            <i data-lucide="receipt" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div id="kpi-total-tx" class="text-2xl font-bold font-mono text-purple-400">0</div>
+        <div id="kpi-currency-tag" class="text-[11px] text-slate-500 mt-1">Moneda: USD</div>
+      </div>
+    </div>
+
+    <!-- Transactions Interactive Table Section -->
+    <div id="table-container-section" class="glass-panel rounded-2xl p-6 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 class="text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="list-checks" class="w-5 h-5 text-indigo-400"></i>
+            Movimientos Extraídos
+          </h3>
+          <p class="text-xs text-slate-400">Puedes editar cualquier celda antes de generar el archivo Excel.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- Search input -->
+          <div class="relative">
+            <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-2.5"></i>
+            <input type="text" id="filter-input" placeholder="Buscar concepto o ref..." class="pl-9 pr-3 py-1.5 text-xs rounded-xl bg-slate-900 border border-slate-700 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-48 sm:w-64">
+          </div>
+
+          <!-- Add row button -->
+          <button id="btn-add-row" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-colors">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Agregar Fila
+          </button>
+
+          <!-- Export Excel Button -->
+          <button id="btn-export" disabled class="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition-all">
+            <i data-lucide="download" class="w-4 h-4"></i> Descargar Excel (.xlsx)
+          </button>
+        </div>
+      </div>
+
+      <!-- Table scroll area -->
+      <div class="overflow-x-auto rounded-xl border border-slate-800">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-slate-900/90 text-slate-400 uppercase tracking-wider text-[11px] border-b border-slate-800">
+              <th class="p-3 text-center w-12">#</th>
+              <th class="p-3 w-28">Fecha</th>
+              <th class="p-3 min-w-[200px]">Concepto / Descripción</th>
+              <th class="p-3 w-32">Referencia</th>
+              <th class="p-3 w-28 text-center">Tipo</th>
+              <th class="p-3 w-32 text-right">Monto</th>
+              <th class="p-3 w-32 text-right">Saldo</th>
+              <th class="p-3 w-20 text-center">Moneda</th>
+              <th class="p-3 w-36">Origen</th>
+              <th class="p-3 w-12 text-center">Acción</th>
+            </tr>
+          </thead>
+          <tbody id="tx-tbody" class="divide-y divide-slate-800/60 font-mono">
+            <tr id="empty-table-row">
+              <td colspan="10" class="p-12 text-center text-slate-500 font-sans">
+                <i data-lucide="inbox" class="w-8 h-8 mx-auto text-slate-600 mb-2"></i>
+                Sube extractos bancarios para visualizar los movimientos aquí.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Notification Toast Container -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- JavaScript Logic -->
+  <script>
+    // State
+    let selectedFiles = [];
+    let transactions = [];
+    let predominantCurrency = 'USD';
+
+    // DOM Elements
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const fileQueueList = document.getElementById('file-queue-list');
+    const queueCount = document.getElementById('queue-count');
+    const emptyQueueMsg = document.getElementById('empty-queue-msg');
+    const btnProcess = document.getElementById('btn-process');
+    const btnExport = document.getElementById('btn-export');
+    const btnAddRow = document.getElementById('btn-add-row');
+    const filterInput = document.getElementById('filter-input');
+    const txTbody = document.getElementById('tx-tbody');
+
+    const kpiIngresos = document.getElementById('kpi-ingresos');
+    const kpiEgresos = document.getElementById('kpi-egresos');
+    const kpiSaldoNeto = document.getElementById('kpi-saldo-neto');
+    const kpiNetoBadge = document.getElementById('kpi-neto-badge');
+    const kpiTotalTx = document.getElementById('kpi-total-tx');
+    const kpiCurrencyTag = document.getElementById('kpi-currency-tag');
+
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Check backend health periodically
+    async function checkHealth() {
+      try {
+        const res = await fetch('/health');
+        if (res.ok) {
+          document.getElementById('system-status-text').textContent = 'Sistema En Línea';
+        }
+      } catch (e) {
+        document.getElementById('system-status-text').textContent = 'Desconectado';
+        document.getElementById('system-status-pill').className =
+          'flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20';
+      }
+    }
+    checkHealth();
+
+    // Drag and Drop Events
+    dropZone.addEventListener('click', () => fileInput.click());
+    ['dragenter', 'dragover'].forEach(name => {
+      dropZone.addEventListener(name, (e) => {
+        e.preventDefault();
+        dropZone.classList.add('border-indigo-500', 'bg-indigo-950/30');
+      });
+    });
+    ['dragleave', 'drop'].forEach(name => {
+      dropZone.addEventListener(name, (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-indigo-500', 'bg-indigo-950/30');
+      });
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      const files = Array.from(e.dataTransfer.files);
+      addFiles(files);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const files = Array.from(e.target.files);
+      addFiles(files);
+      fileInput.value = '';
+    });
+
+    function addFiles(files) {
+      files.forEach(file => {
+        const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+        if (['.pdf', '.csv', '.txt'].includes(ext)) {
+          if (!selectedFiles.some(f => f.name === file.name && f.size === file.size)) {
+            selectedFiles.push(file);
+          }
+        } else {
+          showToast(`Formato no soportado: ${file.name}`, 'warning');
+        }
+      });
+      renderFileQueue();
+    }
+
+    function removeFile(index) {
+      selectedFiles.splice(index, 1);
+      renderFileQueue();
+    }
+
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function renderFileQueue() {
+      queueCount.textContent = selectedFiles.length;
+      if (selectedFiles.length === 0) {
+        fileQueueList.innerHTML = '<div class="text-center py-6 text-xs text-slate-500">No hay archivos seleccionados</div>';
+        btnProcess.disabled = true;
+        return;
+      }
+
+      btnProcess.disabled = false;
+      fileQueueList.innerHTML = '';
+
+      selectedFiles.forEach((file, idx) => {
+        const isPdf = file.name.toLowerCase().endsWith('.pdf');
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-slate-800 text-xs';
+        item.innerHTML = `
+          <div class="flex items-center gap-2 truncate">
+            <i data-lucide="${isPdf ? 'file-text' : 'table'}" class="w-4 h-4 ${isPdf ? 'text-rose-400' : 'text-emerald-400'} shrink-0"></i>
+            <span class="truncate text-slate-200 font-sans">${escapeHtml(file.name)}</span>
+            <span class="text-[10px] text-slate-500 shrink-0 font-mono">(${formatBytes(file.size)})</span>
+          </div>
+          <button onclick="removeFile(${idx})" class="text-slate-500 hover:text-rose-400 p-1 rounded transition-colors" title="Eliminar">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        `;
+        fileQueueList.appendChild(item);
+      });
+
+      lucide.createIcons();
+    }
+
+    // Process Files
+    btnProcess.addEventListener('click', async () => {
+      if (selectedFiles.length === 0) return;
+
+      const formData = new FormData();
+      selectedFiles.forEach(file => formData.append('files', file));
+
+      btnProcess.disabled = true;
+      btnProcess.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Extrayendo transacciones...</span>`;
+      lucide.createIcons();
+
+      try {
+        const res = await fetch('/api/extract', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || 'Error procesando los extractos.');
+        }
+
+        const data = await res.json();
+        transactions = data.transacciones || [];
+        predominantCurrency = data.moneda_predominante || 'USD';
+
+        renderTable();
+        recalcKPIs();
+
+        if (data.archivos_con_error && data.archivos_con_error.length > 0) {
+          showToast(`Atención con ${data.archivos_con_error.length} archivo(s): ${data.archivos_con_error.join(', ')}`, 'warning');
+        } else {
+          showToast(`¡Se extrajeron ${transactions.length} movimientos con éxito!`, 'success');
+        }
+
+        btnExport.disabled = transactions.length === 0;
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        btnProcess.disabled = false;
+        btnProcess.innerHTML = `<i data-lucide="cpu" class="w-4 h-4"></i><span>Procesar y Extraer Movimientos</span>`;
+        lucide.createIcons();
+      }
+    });
+
+    // Render Table
+    function renderTable() {
+      const q = filterInput.value.toLowerCase().trim();
+      const filtered = transactions.filter(t =>
+        t.descripcion_concepto.toLowerCase().includes(q) ||
+        t.referencia.toLowerCase().includes(q) ||
+        t.fecha.includes(q)
+      );
+
+      if (filtered.length === 0) {
+        txTbody.innerHTML = `
+          <tr>
+            <td colspan="10" class="p-8 text-center text-slate-500 font-sans">
+              No se encontraron transacciones para el filtro actual.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      txTbody.innerHTML = '';
+      filtered.forEach((tx, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/40 transition-colors text-slate-300';
+        tr.dataset.id = tx.id;
+
+        const isIngreso = tx.tipo_movimiento === 'ingreso';
+
+        tr.innerHTML = `
+          <td class="p-3 text-center text-slate-500">${idx + 1}</td>
+          <td class="p-3">
+            <span contenteditable="true" class="editable-cell px-1.5 py-0.5" onblur="updateField('${tx.id}', 'fecha', this.textContent)">${escapeHtml(tx.fecha)}</span>
+          </td>
+          <td class="p-3 font-sans">
+            <span contenteditable="true" class="editable-cell px-1.5 py-0.5 block" onblur="updateField('${tx.id}', 'descripcion_concepto', this.textContent)">${escapeHtml(tx.descripcion_concepto)}</span>
+          </td>
+          <td class="p-3 text-slate-400">
+            <span contenteditable="true" class="editable-cell px-1.5 py-0.5" onblur="updateField('${tx.id}', 'referencia', this.textContent)">${escapeHtml(tx.referencia)}</span>
+          </td>
+          <td class="p-3 text-center">
+            <button onclick="toggleTipo('${tx.id}')" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase transition-all ${isIngreso ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}">
+              ${isIngreso ? 'Ingreso' : 'Egreso'}
+            </button>
+          </td>
+          <td class="p-3 text-right ${isIngreso ? 'text-emerald-400' : 'text-rose-400'} font-semibold">
+            <span contenteditable="true" class="editable-cell px-1.5 py-0.5" onblur="updateAmountField('${tx.id}', this.textContent)">${formatNumber(tx.monto)}</span>
+          </td>
+          <td class="p-3 text-right text-slate-400">
+            <span contenteditable="true" class="editable-cell px-1.5 py-0.5" onblur="updateBalanceField('${tx.id}', this.textContent)">${tx.saldo_resultante !== null ? formatNumber(tx.saldo_resultante) : '-'}</span>
+          </td>
+          <td class="p-3 text-center text-slate-400 font-sans">${escapeHtml(tx.moneda || 'USD')}</td>
+          <td class="p-3 text-slate-400 truncate max-w-[150px] font-sans" title="${escapeHtml(tx.nombre_archivo_origen)}">${escapeHtml(tx.nombre_archivo_origen)}</td>
+          <td class="p-3 text-center">
+            <button onclick="deleteRow('${tx.id}')" class="text-slate-500 hover:text-rose-400 p-1 rounded transition-colors" title="Eliminar fila">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </td>
+        `;
+        txTbody.appendChild(tr);
+      });
+
+      lucide.createIcons();
+    }
+
+    // Editable cell event handlers
+    function updateField(id, key, value) {
+      const tx = transactions.find(t => t.id === id);
+      if (tx) {
+        tx[key] = value.trim();
+      }
+    }
+
+    function updateAmountField(id, valText) {
+      const tx = transactions.find(t => t.id === id);
+      if (tx) {
+        const clean = valText.replace(/[^0-9.-]/g, '');
+        const num = parseFloat(clean);
+        if (!isNaN(num) && num >= 0) {
+          tx.monto = Math.round(num * 100) / 100;
+        }
+        recalcKPIs();
+        renderTable();
+      }
+    }
+
+    function updateBalanceField(id, valText) {
+      const tx = transactions.find(t => t.id === id);
+      if (tx) {
+        const clean = valText.replace(/[^0-9.-]/g, '');
+        const num = parseFloat(clean);
+        tx.saldo_resultante = !isNaN(num) ? Math.round(num * 100) / 100 : null;
+      }
+    }
+
+    function toggleTipo(id) {
+      const tx = transactions.find(t => t.id === id);
+      if (tx) {
+        tx.tipo_movimiento = tx.tipo_movimiento === 'ingreso' ? 'egreso' : 'ingreso';
+        recalcKPIs();
+        renderTable();
+      }
+    }
+
+    function deleteRow(id) {
+      transactions = transactions.filter(t => t.id !== id);
+      recalcKPIs();
+      renderTable();
+      btnExport.disabled = transactions.length === 0;
+    }
+
+    // Add manual row
+    btnAddRow.addEventListener('click', () => {
+      const today = new Date().toISOString().split('T')[0];
+      const newTx = {
+        id: crypto.randomUUID(),
+        fecha: today,
+        descripcion_concepto: 'Ajuste manual de conciliación',
+        referencia: 'MANUAL',
+        tipo_movimiento: 'ingreso',
+        monto: 100.0,
+        saldo_resultante: null,
+        moneda: predominantCurrency || 'USD',
+        nombre_archivo_origen: 'Manual',
+        estado: 'success',
+        mensaje_error: null,
+      };
+      transactions.unshift(newTx);
+      recalcKPIs();
+      renderTable();
+      btnExport.disabled = false;
+      showToast('Fila agregada. Haz clic en las celdas para editar.', 'info');
+    });
+
+    filterInput.addEventListener('input', renderTable);
+
+    // Live KPI Recalculation
+    function recalcKPIs() {
+      let ingresos = 0;
+      let egresos = 0;
+
+      transactions.forEach(t => {
+        if (t.tipo_movimiento === 'ingreso') {
+          ingresos += Number(t.monto) || 0;
+        } else {
+          egresos += Number(t.monto) || 0;
+        }
+      });
+
+      const neto = ingresos - egresos;
+
+      kpiIngresos.textContent = '$' + formatNumber(ingresos);
+      kpiEgresos.textContent = '$' + formatNumber(egresos);
+      kpiSaldoNeto.textContent = (neto < 0 ? '-$' : '$') + formatNumber(Math.abs(neto));
+      kpiTotalTx.textContent = transactions.length;
+      kpiCurrencyTag.textContent = `Moneda: ${predominantCurrency}`;
+
+      if (neto >= 0) {
+        kpiSaldoNeto.className = 'text-2xl font-bold font-mono text-emerald-400';
+        kpiNetoBadge.textContent = 'Superávit en el periodo';
+        kpiNetoBadge.className = 'text-[11px] text-emerald-500 mt-1';
+      } else {
+        kpiSaldoNeto.className = 'text-2xl font-bold font-mono text-rose-400';
+        kpiNetoBadge.textContent = 'Déficit en el periodo';
+        kpiNetoBadge.className = 'text-[11px] text-rose-500 mt-1';
+      }
+    }
+
+    function formatNumber(num) {
+      if (num === null || num === undefined) return '0.00';
+      return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // Export Excel
+    btnExport.addEventListener('click', async () => {
+      if (transactions.length === 0) return;
+
+      btnExport.disabled = true;
+      btnExport.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Generando Excel...</span>`;
+      lucide.createIcons();
+
+      try {
+        const payload = {
+          transacciones: transactions,
+          nombre_reporte: 'Conciliacion_Bancaria',
+          incluir_resumen: true,
+        };
+
+        const res = await fetch('/api/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          throw new Error('Error al generar el archivo Excel');
+        }
+
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        const now = new Date().toISOString().slice(0, 10);
+        a.download = `Conciliacion_Bancaria_${now}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+
+        showToast('¡Archivo Excel corporativo descargado exitosamente!', 'success');
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        btnExport.disabled = false;
+        btnExport.innerHTML = `<i data-lucide="download" class="w-4 h-4"></i><span>Descargar Excel (.xlsx)</span>`;
+        lucide.createIcons();
+      }
+    });
+
+    // Toast notification system
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+
+      const colors = {
+        success: 'bg-emerald-950/90 text-emerald-200 border-emerald-800',
+        error: 'bg-rose-950/90 text-rose-200 border-rose-800',
+        warning: 'bg-amber-950/90 text-amber-200 border-amber-800',
+        info: 'bg-indigo-950/90 text-indigo-200 border-indigo-800',
+      };
+
+      const icons = {
+        success: 'check-circle-2',
+        error: 'alert-triangle',
+        warning: 'alert-circle',
+        info: 'info',
+      };
+
+      toast.className = `flex items-center gap-2.5 px-4 py-3 rounded-xl border text-xs font-medium shadow-xl backdrop-blur pointer-events-auto transition-all transform translate-y-2 opacity-0 duration-200 ${colors[type] || colors.info}`;
+      toast.innerHTML = `
+        <i data-lucide="${icons[type] || 'info'}" class="w-4 h-4 shrink-0"></i>
+        <span>${escapeHtml(message)}</span>
+      `;
+
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      }, 10);
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 250);
+      }, 4000);
+    }
+  </script>
+</body>
+</html>
