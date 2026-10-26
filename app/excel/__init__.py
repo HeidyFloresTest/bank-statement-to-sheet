@@ -1,0 +1,1 @@
+"""Excel report generator subpackage."""
